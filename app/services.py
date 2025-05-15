@@ -3,6 +3,10 @@ from app.config import OPENAI_API_KEY
 from fastapi import HTTPException
 
 async def ask_openai(question: str) -> str:
+    # Jeśli klucz nie istnieje lub nadal placeholder
+    if not OPENAI_API_KEY or OPENAI_API_KEY == "tu_wklej_swoj_klucz":
+        return "This would be the AI's response if the API were active and paid."
+
     url = "https://api.openai.com/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
@@ -23,12 +27,11 @@ async def ask_openai(question: str) -> str:
             return data["choices"][0]["message"]["content"]
 
     except httpx.HTTPStatusError as e:
-        if e.response.status_code == 429:
-            raise HTTPException(status_code=429, detail="Za dużo zapytań – spróbuj ponownie za chwilę.")
-        elif e.response.status_code == 401:
-            raise HTTPException(status_code=401, detail="Nieprawidłowy klucz API OpenAI.")
+        if e.response.status_code in [401, 429]:
+            # Jeśli brak autoryzacji lub limit – pokaż demo odpowiedź
+            return "This would be the AI's response if the API were active and paid."
         else:
-            raise HTTPException(status_code=500, detail=f"Błąd OpenAI: {e.response.text}")
+            raise HTTPException(status_code=500, detail=f"OpenAI error: {e.response.text}")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Błąd wewnętrzny: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
